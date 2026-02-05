@@ -1,18 +1,18 @@
 import math
 from item.item import Item
 from ray import Ray
-from vec3 import Vec3
+from numpy_utils import *
 import numpy as np
 from PIL import Image
 
 
 class Canvas():
-    def __init__(self, eye: Vec3, bottom_left: Vec3, top_right: Vec3, pixel_width: int, pixel_height: int):
+    def __init__(self, eye: np.ndarray, bottom_left: np.ndarray, top_right: np.ndarray, pixel_width: int, pixel_height: int):
         self.eye = eye
         self.bottom_left = bottom_left
         self.top_right = top_right
-        self.top_left = Vec3(bottom_left[0], top_right[1], bottom_left[2])
-        self.bottom_right = Vec3(top_right[0], bottom_left[1], top_right[2])
+        self.top_left = np.array([bottom_left[0], top_right[1], bottom_left[2]])
+        self.bottom_right = np.array([top_right[0], bottom_left[1], top_right[2]])
         self.pixel_width = pixel_width
         self.pixel_height = pixel_height
         self.items = []
@@ -38,7 +38,7 @@ class Canvas():
                 
                 ray_direction = self.bottom_left + u * viewport_horizontal + v * viewport_vertical - self.eye
                 
-                r = Ray(self.eye, ray_direction.normalize())
+                r = Ray(self.eye, normalize(ray_direction))
 
                 # Check collision with an item
                 minimum_t = math.inf
@@ -54,9 +54,9 @@ class Canvas():
                             nearest_item = item
                 
                 if nearest_item is not None:
-                    color_vec = Vec3(1, 1, 0.25)
+                    color_vec = np.array([1, 1, 0.25])
                 else:
-                    color_vec = Vec3(0,0,0)
+                    color_vec = np.array([0, 0, 0])
                     
                 # Convert color vector (0.0-1.0) to RGB bytes (0-255) and write to the array.
                 image_data[self.pixel_height - 1 - h, w] = (255.999 * color_vec).astype(int)

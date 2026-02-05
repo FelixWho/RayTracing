@@ -1,0 +1,49 @@
+import numpy as np
+from math import sin, cos
+
+def array_of(*args) -> np.ndarray:
+    return np.array(args, dtype=float)
+
+def magnitude(arr: np.ndarray) -> float:
+    return np.linalg.norm(arr)
+
+def normalize(arr: np.ndarray) -> np.ndarray:
+    mag = magnitude(arr)
+    if mag != 0:
+        return arr / mag
+    return arr.copy() # Return a copy to avoid modifying the original array
+
+def rotate(arr: np.ndarray, x_rad: float, y_rad: float, z_rad: float) -> np.ndarray:
+    # This implementation uses the ZYX extrinsic rotation convention (or XYZ intrinsic).
+    # This means rotations are applied in the order: Z-axis, then Y-axis, then X-axis
+    # relative to the fixed (world) coordinate system.
+    # The combined rotation matrix R is R_x(x_rad) @ R_y(y_rad) @ R_z(z_rad).
+
+    # Rotation matrix around X-axis
+    Rx = np.array([
+        [1, 0, 0],
+        [0, cos(x_rad), -sin(x_rad)],
+        [0, sin(x_rad), cos(x_rad)]
+    ])
+
+    # Rotation matrix around Y-axis
+    Ry = np.array([
+        [cos(y_rad), 0, sin(y_rad)],
+        [0, 1, 0],
+        [-sin(y_rad), 0, cos(y_rad)]
+    ])
+
+    # Rotation matrix around Z-axis
+    Rz = np.array([
+        [cos(z_rad), -sin(z_rad), 0],
+        [sin(z_rad), cos(z_rad), 0],
+        [0, 0, 1]
+    ])
+
+    # Combine rotations: R = Rx @ Ry @ Rz
+    rotation_matrix = Rx @ Ry @ Rz
+    
+    return rotation_matrix @ arr
+
+def rotate_degrees(arr: np.ndarray, x_deg: float, y_deg: float, z_deg: float) -> np.ndarray:
+    return rotate(arr, np.deg2rad(x_deg), np.deg2rad(y_deg), np.deg2rad(z_deg))

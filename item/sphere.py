@@ -1,4 +1,4 @@
-from vec3 import Vec3
+from numpy_utils import *
 from item.item import Item
 from ray import Ray
 import numpy as np
@@ -41,6 +41,6 @@ class Sphere(Item):
         t = min(ts)
 
         intersection_point = incoming_ray.center + t*incoming_ray.dir
-        surface_normal = (intersection_point - self.center).normalize()
+        surface_normal = normalize(intersection_point - self.center)
         out_dir = incoming_ray.dir - 2 * np.dot(incoming_ray.dir, surface_normal) * surface_normal
-        return Ray(intersection_point, out_dir)
+        return Ray(intersection_point, normalize(out_dir))
