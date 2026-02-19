@@ -11,36 +11,54 @@ class Sphere(Item):
     def reflect(self, incoming_ray: Ray) -> Ray | None:
         """
         Calculates the reflection of a ray off the sphere.
-
-        First, it solves for the intersection point using the quadratic formula.
-        If an intersection is found, it calculates the surface normal and the
-        reflected ray's direction, returning a new Ray object.
-        Returns None if the ray does not intersect the sphere.
+        
+        Expects a vectorized ray bundle (dir shape (H, W, 3)).
+        Returns None if no ray in the bundle intersects the sphere.
         """
         # Vector from ray origin (O) to sphere center (C)
-        oc = incoming_ray.center - self.center
+        oc = incoming_ray.center - self.center  # (3,)
 
-        a = np.dot(incoming_ray.dir, incoming_ray.dir)
-        b = 2.0 * np.dot(oc, incoming_ray.dir)
-        c = np.dot(oc, oc) - self.radius**2
+        d = incoming_ray.dir  # (H, W, 3)
 
-        discriminant = b**2 - 4 * a * c
+        a = np.sum(d * d, axis=-1)           # (H, W)
+        b = 2.0 * np.sum(oc * d, axis=-1)   # (H, W)
+        c = float(np.dot(oc, oc)) - self.radius**2  # scalar
 
-        if discriminant < 0:
+        discriminant = b**2 - 4 * a * c  # (H, W) or scalar
+
+        hit = discriminant >= 0
+        if not np.any(hit):
             return None
 
-        sqrt_disc = np.sqrt(discriminant)
+        sqrt_disc = np.sqrt(np.maximum(discriminant, 0.0))
         t1 = (-b - sqrt_disc) / (2.0 * a)
         t2 = (-b + sqrt_disc) / (2.0 * a)
 
-        # Find the smallest, positive intersection distance 't'
-        # A small epsilon (1e-4) is used to avoid self-intersection artifacts.
-        ts = [t for t in (t1, t2) if t > 1e-4]
-        if not ts:
-            return None
-        t = min(ts)
+        eps = 1e-4
+        t1_ok = np.where(hit & (t1 > eps), t1, np.inf)
+        t2_ok = np.where(hit & (t2 > eps), t2, np.inf)
+        t = np.minimum(t1_ok, t2_ok)  # (H, W)
 
-        intersection_point = incoming_ray.center + t*incoming_ray.dir
-        surface_normal = normalize(intersection_point - self.center)
-        out_dir = incoming_ray.dir - 2 * np.dot(incoming_ray.dir, surface_normal) * surface_normal
-        return Ray(intersection_point, normalize(out_dir))
+        valid = t < np.inf
+        if not np.any(valid):
+            return None
+
+        t3d = t[..., np.newaxis]  # (H, W, 1)
+        intersection_point = incoming_ray.center + t3d * d  # (H, W, 3)
+
+        surface_normal = intersection_point - self.center   # (H, W, 3)
+        sn_norms = np.linalg.norm(surface_normal, axis=-1, keepdims=True)
+        sn_norms = np.where(sn_norms == 0, 1.0, sn_norms)
+        surface_normal = surface_normal / sn_norms
+
+        dot_dn = np.sum(d * surface_normal, axis=-1, keepdims=True)  # (H, W, 1)
+        out_dir = d - 2.0 * dot_dn * surface_normal  # (H, W, 3)
+        od_norms = np.linalg.norm(out_dir, axis=-1, keepdims=True)
+        od_norms = np.where(od_norms == 0, 1.0, od_norms)
+        out_dir = out_dir / od_norms
+
+        # Non-hit pixels get inf center so they never win the distance comparison
+        intersection_point[~valid] = np.inf
+        out_dir[~valid] = 0.0
+
+        return Ray(intersection_point, out_dir)
