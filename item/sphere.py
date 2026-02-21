@@ -43,7 +43,9 @@ class Sphere(Item):
         if not np.any(valid):
             return None
 
-        t3d = t[..., np.newaxis]  # (H, W, 1)
+        # Replace inf with 0.0 to prevent inf/nan in downstream calculations
+        t_safe = np.where(valid, t, 0.0)
+        t3d = t_safe[..., np.newaxis]  # (H, W, 1)
         intersection_point = incoming_ray.center + t3d * d  # (H, W, 3)
 
         surface_normal = intersection_point - self.center   # (H, W, 3)

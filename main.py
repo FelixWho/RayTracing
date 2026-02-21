@@ -1,6 +1,7 @@
 from canvas import Canvas
 from ray import Ray
 from item.sphere import Sphere
+from item.plane import Plane
 from numpy_utils import *
 import numpy as np
 
@@ -23,4 +24,5 @@ if __name__ == '__main__':
     canvas = Canvas(array_of(0, 0, 0), array_of(-1, -1, 1), array_of(1, 1, 1), 300, 300)
     canvas.add_item(Sphere(0, 0, 2, 0.5))
     canvas.add_item(Sphere(1, 0, 2, 0.4))
+    canvas.add_item(Plane(0, -1, 0, 0, 1, 0)) # Floor plane at y=-1, facing +y
     canvas.render()
